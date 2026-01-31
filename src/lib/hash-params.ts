@@ -28,7 +28,10 @@ export function getHashParams(hashContents = window.location.hash): HashParams {
     const components = hashContents.substr(1).split('&')
     const result: HashParams = {}
     for (const component of components) {
-      let [key, value] = component.split('=')
+      const eqIndex = component.indexOf('=')
+      if (eqIndex === -1) continue
+      const key = component.substring(0, eqIndex)
+      let value = component.substring(eqIndex + 1)
       value = decodeURIComponent(value)
       if (key === 'profileURL') {
         result.profileURL = value

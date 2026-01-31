@@ -59,6 +59,18 @@ async function importFromFileSystemDirectoryEntry(entry: FileSystemDirectoryEntr
   return (await importModule).importFromFileSystemDirectoryEntry(entry)
 }
 
+async function isPastilaUrl(url: string): Promise<boolean> {
+  return (await importModule).isPastilaUrl(url)
+}
+
+async function loadFromPastilaUrl(url: string): Promise<ArrayBuffer> {
+  return (await importModule).loadFromPastilaUrl(url)
+}
+
+async function getPastilaFilename(url: string): Promise<string> {
+  return (await importModule).getPastilaFilename(url)
+}
+
 declare function require(x: string): any
 const exampleProfileURL = require('../../sample/profiles/stackcollapse/perf-vertx-stacks-01-collapsed-all.txt')
 
@@ -436,6 +448,17 @@ export class Application extends StatelessComponent<ApplicationProps> {
         )
         return
       }
+
+      if (await isPastilaUrl(profileURL)) {
+        console.log('Detected pastila.nl URL')
+        this.loadProfile(async () => {
+          const buffer = await loadFromPastilaUrl(profileURL)
+          const filename = await getPastilaFilename(profileURL)
+          return await importProfilesFromArrayBuffer(filename, buffer)
+        })
+        return
+      }
+
       this.loadProfile(async () => {
         const response: Response = await fetch(profileURL)
         let filename = new URL(profileURL, window.location.href).pathname
