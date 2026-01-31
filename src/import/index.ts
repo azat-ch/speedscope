@@ -235,3 +235,5 @@ async function _importProfileGroup(dataSource: ProfileDataSource): Promise<Profi
 export async function importFromFileSystemDirectoryEntry(entry: FileSystemDirectoryEntry) {
   return importFromInstrumentsTrace(entry)
 }
+
+export {isPastilaUrl, loadFromPastilaUrl, getPastilaFilename} from './pastila'
