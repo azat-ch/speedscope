@@ -1,6 +1,6 @@
 import {Atom} from '../lib/atom'
 import {ViewMode} from '../lib/view-mode'
-import {getHashParams, HashParams} from '../lib/hash-params'
+import {getHashParams, HashParams, saveViewModeToHash} from '../lib/hash-params'
 import {ProfileGroupAtom} from './profile-group'
 import {Vec2} from '../lib/math'
 
@@ -24,6 +24,9 @@ export const profileGroupAtom = new ProfileGroupAtom(null, 'profileGroup')
 viewModeAtom.subscribe(() => {
   // If we switch views, the hover information is no longer relevant
   profileGroupAtom.clearHoverNode()
+
+  // Persist the selected view in the URL so it survives reload & sharing
+  saveViewModeToHash(viewModeAtom.get())
 })
 
 // Parameters defined by the URL encoded k=v pairs after the # in the URL

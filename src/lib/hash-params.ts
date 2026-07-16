@@ -20,6 +20,44 @@ function getViewMode(value: string): ViewMode | null {
   }
 }
 
+function viewModeToString(viewMode: ViewMode): string {
+  switch (viewMode) {
+    case ViewMode.CHRONO_FLAME_CHART:
+      return 'time-ordered'
+    case ViewMode.LEFT_HEAVY_FLAME_GRAPH:
+      return 'left-heavy'
+    case ViewMode.SANDWICH_VIEW:
+      return 'sandwich'
+  }
+}
+
+// Returns the hash fragment with the view= component replaced (or appended),
+// leaving all other components byte-for-byte intact so that values which are
+// not strictly URI-encoded (e.g. profileURL) survive the round-trip.
+export function hashWithViewMode(hashContents: string, viewMode: ViewMode): string {
+  const viewComponent = `view=${viewModeToString(viewMode)}`
+  const body = hashContents.startsWith('#') ? hashContents.substr(1) : ''
+  if (body.length === 0) {
+    return `#${viewComponent}`
+  }
+  const components = body.split('&')
+  let found = false
+  for (let i = 0; i < components.length; i++) {
+    if (components[i].startsWith('view=')) {
+      components[i] = viewComponent
+      found = true
+    }
+  }
+  if (!found) {
+    components.push(viewComponent)
+  }
+  return '#' + components.join('&')
+}
+
+export function saveViewModeToHash(viewMode: ViewMode): void {
+  window.history.replaceState(null, '', hashWithViewMode(window.location.hash, viewMode))
+}
+
 export function getHashParams(hashContents = window.location.hash): HashParams {
   try {
     if (!hashContents.startsWith('#')) {
