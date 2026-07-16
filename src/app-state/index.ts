@@ -1,11 +1,26 @@
 import {Atom} from '../lib/atom'
 import {ViewMode} from '../lib/view-mode'
-import {getHashParams, HashParams, saveViewModeToHash} from '../lib/hash-params'
+import {getHashParams, HashParams, saveReverseToHash, saveViewModeToHash} from '../lib/hash-params'
 import {ProfileGroupAtom} from './profile-group'
 import {Vec2} from '../lib/math'
 
+// Parameters defined by the URL encoded k=v pairs after the # in the URL
+const hashParams = getHashParams()
+export const hashParamsAtom = new Atom<HashParams>(hashParams, 'hashParams')
+
 // True if recursion should be flattened when viewing flamegraphs
 export const flattenRecursionAtom = new Atom<boolean>(false, 'flattenRecursion')
+
+// True if the left heavy view should merge stacks leaf-first (reverse
+// flamegraph, as in flamegraph.pl --reverse)
+export const reverseFlamegraphAtom = new Atom<boolean>(
+  hashParams.reverse === true,
+  'reverseFlamegraph',
+)
+
+reverseFlamegraphAtom.subscribe(() => {
+  saveReverseToHash(reverseFlamegraphAtom.get())
+})
 
 // The query used in top-level views
 //
@@ -28,10 +43,6 @@ viewModeAtom.subscribe(() => {
   // Persist the selected view in the URL so it survives reload & sharing
   saveViewModeToHash(viewModeAtom.get())
 })
-
-// Parameters defined by the URL encoded k=v pairs after the # in the URL
-const hashParams = getHashParams()
-export const hashParamsAtom = new Atom<HashParams>(hashParams, 'hashParams')
 
 // The <canvas> element used for WebGL
 export const glCanvasAtom = new Atom<HTMLCanvasElement | null>(null, 'glCanvas')

@@ -3,7 +3,7 @@ import {CanvasContext} from '../gl/canvas-context'
 import {Flamechart} from '../lib/flamechart'
 import {FlamechartRenderer, FlamechartRendererOptions} from '../gl/flamechart-renderer'
 import {Frame, Profile, CallTreeNode} from '../lib/profile'
-import {memoizeByShallowEquality} from '../lib/utils'
+import {memoizeByReference, memoizeByShallowEquality} from '../lib/utils'
 import {FlamechartView} from './flamechart-view'
 import {
   getRowAtlas,
@@ -18,7 +18,8 @@ import {ActiveProfileState} from '../app-state/active-profile-state'
 import {FlamechartSearchContextProvider} from './flamechart-search-view'
 import {Theme, useTheme} from './themes/theme'
 import {FlamechartID, FlamechartViewState} from '../app-state/profile-group'
-import {profileGroupAtom} from '../app-state'
+import {profileGroupAtom, reverseFlamegraphAtom} from '../app-state'
+import {useAtom} from '../lib/atom'
 
 interface FlamechartSetters {
   setLogicalSpaceViewportSize: (logicalSpaceViewportSize: Vec2) => void
@@ -170,10 +171,13 @@ export const getLeftHeavyFlamechart = memoizeByShallowEquality(
 
 const getLeftHeavyFlamechartRenderer = createMemoizedFlamechartRenderer()
 
+const getInvertedProfile = memoizeByReference((profile: Profile) => profile.getInvertedProfile())
+
 export const LeftHeavyFlamechartView = memo((ownProps: FlamechartViewContainerProps) => {
   const {activeProfileState, glCanvas} = ownProps
 
   const {profile, leftHeavyViewState} = activeProfileState
+  const reverseFlamegraph = useAtom(reverseFlamegraphAtom)
 
   const theme = useTheme()
 
@@ -183,7 +187,7 @@ export const LeftHeavyFlamechartView = memo((ownProps: FlamechartViewContainerPr
   const getCSSColorForFrame = createGetCSSColorForFrame({theme, frameToColorBucket})
 
   const flamechart = getLeftHeavyFlamechart({
-    profile,
+    profile: reverseFlamegraph ? getInvertedProfile(profile) : profile,
     getColorBucketForFrame,
   })
   const flamechartRenderer = getLeftHeavyFlamechartRenderer({

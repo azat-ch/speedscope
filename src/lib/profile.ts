@@ -364,6 +364,36 @@ export class Profile {
     return ret
   }
 
+  // Returns a profile with each sample's stack reversed (leaf frame at the
+  // root), like flamegraph.pl --reverse. Only the grouped (left heavy) view
+  // of the result is meaningful: it merges by leaf function first, showing
+  // where time is spent regardless of the call path leading there. All time
+  // ordering information is discarded.
+  getInvertedProfile(): Profile {
+    const builder = new StackListProfileBuilder()
+
+    function visit(node: CallTreeNode) {
+      const selfWeight = node.getSelfWeight()
+      if (selfWeight > 0) {
+        const stack: FrameInfo[] = []
+        for (let n: CallTreeNode | null = node; n != null && n.frame !== Frame.root; n = n.parent) {
+          stack.push(n.frame)
+        }
+        builder.appendSampleWithWeight(stack, selfWeight)
+      }
+      for (let child of node.children) {
+        visit(child)
+      }
+    }
+
+    visit(this.groupedCalltreeRoot)
+
+    const ret = builder.build()
+    ret.name = this.name
+    ret.valueFormatter = this.valueFormatter
+    return ret
+  }
+
   getProfileForCalleesOf(focalFrameInfo: FrameInfo): Profile {
     const focalFrame = Frame.getOrInsert(this.frames, focalFrameInfo)
     const builder = new StackListProfileBuilder()

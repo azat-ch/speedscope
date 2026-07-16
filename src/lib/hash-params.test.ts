@@ -1,4 +1,4 @@
-import {getHashParams, hashWithViewMode} from './hash-params'
+import {getHashParams, hashWithParam, hashWithViewMode} from './hash-params'
 import {ViewMode} from './view-mode'
 
 test('getHashParams', () => {
@@ -29,6 +29,21 @@ test('getHashParams', () => {
   expect(getHashParams('#view=left-heavy')).toEqual({viewMode: ViewMode.LEFT_HEAVY_FLAME_GRAPH})
   expect(getHashParams('#view=sandwich')).toEqual({viewMode: ViewMode.SANDWICH_VIEW})
   expect(getHashParams('#view=garbage')).toEqual({})
+  expect(getHashParams('#reverse=true')).toEqual({reverse: true})
+  expect(getHashParams('#reverse=1')).toEqual({reverse: true})
+  expect(getHashParams('#reverse=false')).toEqual({reverse: false})
+})
+
+test('hashWithParam', () => {
+  expect(hashWithParam('', 'reverse', 'true')).toEqual('#reverse=true')
+  expect(hashWithParam('#view=left-heavy', 'reverse', 'true')).toEqual(
+    '#view=left-heavy&reverse=true',
+  )
+  expect(hashWithParam('#view=left-heavy&reverse=true', 'reverse', null)).toEqual(
+    '#view=left-heavy',
+  )
+  expect(hashWithParam('#reverse=true', 'reverse', null)).toEqual('#')
+  expect(hashWithParam('#title=hello', 'reverse', null)).toEqual('#title=hello')
 })
 
 test('hashWithViewMode', () => {
@@ -46,7 +61,9 @@ test('hashWithViewMode', () => {
       '#profileURL=https://pastila.nl/?00000000/abcdef.json%23keyGCM&title=hello',
       ViewMode.SANDWICH_VIEW,
     ),
-  ).toEqual('#profileURL=https://pastila.nl/?00000000/abcdef.json%23keyGCM&title=hello&view=sandwich')
+  ).toEqual(
+    '#profileURL=https://pastila.nl/?00000000/abcdef.json%23keyGCM&title=hello&view=sandwich',
+  )
   // Round-trip: parsing the updated hash yields the requested view mode
   expect(getHashParams(hashWithViewMode('#title=hello', ViewMode.SANDWICH_VIEW))).toEqual({
     title: 'hello',

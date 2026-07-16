@@ -297,6 +297,35 @@ test('getProfileForCalleesOf', () => {
   ])
 })
 
+test('getInvertedProfile', () => {
+  const b = new StackListProfileBuilder()
+
+  const samples = [
+    // prettier-ignore
+    [fa],
+    [fa, fb],
+    [fa, fb, fc],
+    [fd, fb, fc],
+    [fb],
+  ]
+  samples.forEach(stack => {
+    b.appendSampleWithWeight(stack, 1)
+  })
+
+  const profile = b.build()
+  const inverted = profile.getInvertedProfile()
+
+  expect(inverted.getTotalWeight()).toBe(5)
+  expect(toStackList(inverted, false)).toEqual([
+    // prettier-ignore
+    'a 1',
+    'b;a 1',
+    'c;b;a 1',
+    'c;b;d 1',
+    'b 1',
+  ])
+})
+
 test('getProfileWithRecursionFlattened', () => {
   const b = new StackListProfileBuilder()
 
