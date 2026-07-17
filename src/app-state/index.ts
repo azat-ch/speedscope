@@ -1,19 +1,67 @@
 import {Atom} from '../lib/atom'
 import {ViewMode} from '../lib/view-mode'
-import {getHashParams, HashParams} from '../lib/hash-params'
+import {
+  getHashParams,
+  HashParams,
+  saveFlattenToHash,
+  saveReverseToHash,
+  saveSearchQueryToHash,
+  saveSelectedToHash,
+  saveViewModeToHash,
+} from '../lib/hash-params'
+import {getCallTreeNodeIndexPath} from '../lib/profile'
 import {ProfileGroupAtom} from './profile-group'
 import {Vec2} from '../lib/math'
 
+// Parameters defined by the URL encoded k=v pairs after the # in the URL
+const hashParams = getHashParams()
+export const hashParamsAtom = new Atom<HashParams>(hashParams, 'hashParams')
+
 // True if recursion should be flattened when viewing flamegraphs
-export const flattenRecursionAtom = new Atom<boolean>(false, 'flattenRecursion')
+export const flattenRecursionAtom = new Atom<boolean>(
+  hashParams.flatten === true,
+  'flattenRecursion',
+)
+
+flattenRecursionAtom.subscribe(() => {
+  saveFlattenToHash(flattenRecursionAtom.get())
+})
+
+// True if the left heavy view should merge stacks leaf-first (reverse
+// flamegraph, as in flamegraph.pl --reverse)
+export const reverseFlamegraphAtom = new Atom<boolean>(
+  hashParams.reverse === true,
+  'reverseFlamegraph',
+)
+
+reverseFlamegraphAtom.subscribe(() => {
+  saveReverseToHash(reverseFlamegraphAtom.get())
+})
 
 // The query used in top-level views
 //
 // An empty string indicates that the search is open by no filter is applied.
 // searchIsActive is stored separately, because we may choose to persist the
 // query even when the search input is closed.
-export const searchIsActiveAtom = new Atom<boolean>(false, 'searchIsActive')
-export const searchQueryAtom = new Atom<string>('', 'searchQueryAtom')
+export const searchIsActiveAtom = new Atom<boolean>(
+  hashParams.searchQuery != null,
+  'searchIsActive',
+)
+export const searchQueryAtom = new Atom<string>(hashParams.searchQuery || '', 'searchQueryAtom')
+
+// Pending search match (1-based) to restore from the URL. One-shot: the
+// search view consumes it (sets it to null) once results are available.
+export const searchMatchToRestoreAtom = new Atom<number | null>(
+  hashParams.searchMatch != null ? hashParams.searchMatch : null,
+  'searchMatchToRestore',
+)
+
+function saveSearchToHash() {
+  const query = searchIsActiveAtom.get() ? searchQueryAtom.get() : ''
+  saveSearchQueryToHash(query.length > 0 ? query : null)
+}
+searchIsActiveAtom.subscribe(saveSearchToHash)
+searchQueryAtom.subscribe(saveSearchToHash)
 
 // Which top-level view should be displayed
 export const viewModeAtom = new Atom<ViewMode>(ViewMode.CHRONO_FLAME_CHART, 'viewMode')
@@ -24,11 +72,48 @@ export const profileGroupAtom = new ProfileGroupAtom(null, 'profileGroup')
 viewModeAtom.subscribe(() => {
   // If we switch views, the hover information is no longer relevant
   profileGroupAtom.clearHoverNode()
+
+  // Persist the selected view in the URL so it survives reload & sharing
+  saveViewModeToHash(viewModeAtom.get())
 })
 
-// Parameters defined by the URL encoded k=v pairs after the # in the URL
-const hashParams = getHashParams()
-export const hashParamsAtom = new Atom<HashParams>(hashParams, 'hashParams')
+// Pending selection to restore from the URL: a dot-separated calltree index
+// path for flamechart views, or a frame key for the sandwich view. One-shot:
+// the active view consumes it (sets it to null) once it can resolve it.
+export const selectedToRestoreAtom = new Atom<string | null>(
+  hashParams.selected != null ? hashParams.selected : null,
+  'selectedToRestore',
+)
+
+function syncSelectedToHash() {
+  // Don't clobber the selected= parameter before it has been restored
+  if (selectedToRestoreAtom.get() != null) return
+
+  let value: string | null = null
+  const profileState = profileGroupAtom.getActiveProfile()
+  if (profileState != null) {
+    switch (viewModeAtom.get()) {
+      case ViewMode.CHRONO_FLAME_CHART: {
+        const node = profileState.chronoViewState.selectedNode
+        if (node != null) value = getCallTreeNodeIndexPath(node).join('.')
+        break
+      }
+      case ViewMode.LEFT_HEAVY_FLAME_GRAPH: {
+        const node = profileState.leftHeavyViewState.selectedNode
+        if (node != null) value = getCallTreeNodeIndexPath(node).join('.')
+        break
+      }
+      case ViewMode.SANDWICH_VIEW: {
+        const frame = profileState.sandwichViewState.callerCallee?.selectedFrame
+        if (frame != null) value = String(frame.key)
+        break
+      }
+    }
+  }
+  saveSelectedToHash(value)
+}
+viewModeAtom.subscribe(syncSelectedToHash)
+profileGroupAtom.subscribe(syncSelectedToHash)
 
 // The <canvas> element used for WebGL
 export const glCanvasAtom = new Atom<HTMLCanvasElement | null>(null, 'glCanvas')

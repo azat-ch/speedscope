@@ -8,7 +8,7 @@ import {Profile} from '../lib/profile'
 import {objectsHaveShallowEquality} from '../lib/utils'
 import {colorSchemeToString, useTheme, withTheme} from './themes/theme'
 import {ViewMode} from '../lib/view-mode'
-import {viewModeAtom} from '../app-state'
+import {reverseFlamegraphAtom, viewModeAtom} from '../app-state'
 import {ProfileGroupState} from '../app-state/profile-group'
 import {colorSchemeAtom} from '../app-state/color-scheme'
 import {useAtom} from '../lib/atom'
@@ -27,6 +27,11 @@ function ToolbarLeftContent(props: ToolbarProps) {
   const setChronoFlameChart = useSetViewMode(viewModeAtom.set, ViewMode.CHRONO_FLAME_CHART)
   const setLeftHeavyFlameGraph = useSetViewMode(viewModeAtom.set, ViewMode.LEFT_HEAVY_FLAME_GRAPH)
   const setSandwichView = useSetViewMode(viewModeAtom.set, ViewMode.SANDWICH_VIEW)
+  const reverseFlamegraph = useAtom(reverseFlamegraphAtom)
+  const toggleReverseFlamegraph = useCallback(
+    () => reverseFlamegraphAtom.set(!reverseFlamegraph),
+    [reverseFlamegraph],
+  )
 
   if (!props.activeProfileState) return null
 
@@ -59,6 +64,15 @@ function ToolbarLeftContent(props: ToolbarProps) {
       >
         <span className={css(style.emoji)}>🥪</span>Sandwich
       </div>
+      {props.viewMode === ViewMode.LEFT_HEAVY_FLAME_GRAPH && (
+        <div
+          className={css(style.toolbarTab, reverseFlamegraph && style.toolbarTabActive)}
+          onClick={toggleReverseFlamegraph}
+          title="Merge stacks leaf-first, as in flamegraph.pl --reverse"
+        >
+          <span className={css(style.emoji)}>🔃</span>Reversed
+        </div>
+      )}
     </div>
   )
 }

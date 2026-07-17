@@ -106,6 +106,29 @@ export class CallTreeNode extends HasWeights {
   }
 }
 
+// Identifies a node by the child indices along the path from its calltree
+// root. Stable across identically constructed profiles, so it can be used to
+// reference a node in a shared URL.
+export function getCallTreeNodeIndexPath(node: CallTreeNode): number[] {
+  const path: number[] = []
+  for (let n = node; n.parent != null; n = n.parent) {
+    path.push(n.parent.children.indexOf(n))
+  }
+  return path.reverse()
+}
+
+export function getCallTreeNodeAtIndexPath(
+  root: CallTreeNode,
+  path: number[],
+): CallTreeNode | null {
+  let node = root
+  for (const index of path) {
+    if (index < 0 || index >= node.children.length) return null
+    node = node.children[index]
+  }
+  return node === root ? null : node
+}
+
 export interface ProfileGroup {
   name: string
   indexToView: number
@@ -357,6 +380,36 @@ export class Profile {
       }
       builder.appendSampleWithWeight(stack, node.getTotalWeight())
     }
+
+    const ret = builder.build()
+    ret.name = this.name
+    ret.valueFormatter = this.valueFormatter
+    return ret
+  }
+
+  // Returns a profile with each sample's stack reversed (leaf frame at the
+  // root), like flamegraph.pl --reverse. Only the grouped (left heavy) view
+  // of the result is meaningful: it merges by leaf function first, showing
+  // where time is spent regardless of the call path leading there. All time
+  // ordering information is discarded.
+  getInvertedProfile(): Profile {
+    const builder = new StackListProfileBuilder()
+
+    function visit(node: CallTreeNode) {
+      const selfWeight = node.getSelfWeight()
+      if (selfWeight > 0) {
+        const stack: FrameInfo[] = []
+        for (let n: CallTreeNode | null = node; n != null && n.frame !== Frame.root; n = n.parent) {
+          stack.push(n.frame)
+        }
+        builder.appendSampleWithWeight(stack, selfWeight)
+      }
+      for (let child of node.children) {
+        visit(child)
+      }
+    }
+
+    visit(this.groupedCalltreeRoot)
 
     const ret = builder.build()
     ret.name = this.name

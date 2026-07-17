@@ -1,4 +1,5 @@
-import {exactMatchStrings} from './profile-search'
+import {exactMatchStrings, ProfileSearchResults} from './profile-search'
+import {Frame, StackListProfileBuilder} from './profile'
 
 function assertMatch(text: string, pattern: string, expected: string) {
   const match = exactMatchStrings(text, pattern)
@@ -46,5 +47,38 @@ describe('exactMatchStrings', () => {
   test('overlapping occurrences', () => {
     assertMatch('aaaaa', 'aa', '[aa][aa]a')
     assertMatch('abababa', 'aba', '[aba]b[aba]')
+  })
+})
+
+describe('ProfileSearchResults', () => {
+  test('matches frames of derived profiles', () => {
+    const b = new StackListProfileBuilder()
+    b.appendSampleWithWeight(
+      [
+        {key: 'alpha', name: 'alpha'},
+        {key: 'beta', name: 'beta'},
+      ],
+      1,
+    )
+    const profile = b.build()
+
+    const results = new ProfileSearchResults(profile, 'beta')
+
+    const framesByName = (p: typeof profile) => {
+      const map = new Map<string | number, Frame>()
+      p.forEachFrame(f => map.set(f.name, f))
+      return map
+    }
+
+    expect(results.getMatchForFrame(framesByName(profile).get('beta')!)).toEqual([[0, 4]])
+    expect(results.getMatchForFrame(framesByName(profile).get('alpha')!)).toBeNull()
+
+    // Frames of a profile derived from the searched one are distinct
+    // instances with the same keys, and must still match
+    const inverted = profile.getInvertedProfile()
+    const invertedBeta = framesByName(inverted).get('beta')!
+    expect(invertedBeta).not.toBe(framesByName(profile).get('beta')!)
+    expect(results.getMatchForFrame(invertedBeta)).toEqual([[0, 4]])
+    expect(results.getMatchForFrame(framesByName(inverted).get('alpha')!)).toBeNull()
   })
 })
