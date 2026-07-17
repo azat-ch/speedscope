@@ -44,16 +44,19 @@ export class ProfileSearchResults {
     readonly searchQuery: string,
   ) {}
 
-  private matches: Map<Frame, [number, number][] | null> | null = null
+  // Keyed by frame.key rather than Frame identity: profiles derived from
+  // this.profile (e.g. via getInvertedProfile) have distinct Frame instances
+  // sharing the same keys, and their frames must still match.
+  private matches: Map<string | number, [number, number][] | null> | null = null
   getMatchForFrame(frame: Frame): [number, number][] | null {
     if (!this.matches) {
       this.matches = new Map()
       this.profile.forEachFrame(frame => {
         const match = exactMatchStrings(frame.name, this.searchQuery)
-        this.matches!.set(frame, match.length === 0 ? null : match)
+        this.matches!.set(frame.key, match.length === 0 ? null : match)
       })
     }
-    return this.matches.get(frame) || null
+    return this.matches.get(frame.key) || null
   }
 }
 
