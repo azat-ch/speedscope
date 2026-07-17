@@ -33,6 +33,9 @@ test('getHashParams', () => {
   expect(getHashParams('#reverse=1')).toEqual({reverse: true})
   expect(getHashParams('#reverse=false')).toEqual({reverse: false})
   expect(getHashParams('#search=hello%20world')).toEqual({searchQuery: 'hello world'})
+  expect(getHashParams('#search=hello&match=3')).toEqual({searchQuery: 'hello', searchMatch: 3})
+  expect(getHashParams('#match=0')).toEqual({})
+  expect(getHashParams('#match=garbage')).toEqual({})
   // Encoded search queries containing hash-syntax characters must round-trip
   const query = 'a&b=c#d%e'
   expect(

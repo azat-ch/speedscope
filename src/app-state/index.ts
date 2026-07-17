@@ -39,6 +39,13 @@ export const searchIsActiveAtom = new Atom<boolean>(
 )
 export const searchQueryAtom = new Atom<string>(hashParams.searchQuery || '', 'searchQueryAtom')
 
+// Pending search match (1-based) to restore from the URL. One-shot: the
+// search view consumes it (sets it to null) once results are available.
+export const searchMatchToRestoreAtom = new Atom<number | null>(
+  hashParams.searchMatch != null ? hashParams.searchMatch : null,
+  'searchMatchToRestore',
+)
+
 function saveSearchToHash() {
   const query = searchIsActiveAtom.get() ? searchQueryAtom.get() : ''
   saveSearchQueryToHash(query.length > 0 ? query : null)

@@ -1,6 +1,9 @@
 import {memo} from 'preact/compat'
-import {useContext, useMemo, useCallback} from 'preact/hooks'
+import {useContext, useMemo, useCallback, useEffect} from 'preact/hooks'
 import {SearchView, ProfileSearchContext} from './search-view'
+import {searchMatchToRestoreAtom} from '../app-state'
+import {useAtom} from '../lib/atom'
+import {saveSearchMatchToHash} from '../lib/hash-params'
 import {
   FlamechartSearchMatch,
   FlamechartSearchResults,
@@ -111,6 +114,25 @@ export const FlamechartSearchView = memo(() => {
     },
     [configSpaceViewportRect, setConfigSpaceViewportRect, setSelectedNode, flamechart],
   )
+
+  const matchToRestore = useAtom(searchMatchToRestoreAtom)
+
+  useEffect(() => {
+    if (matchToRestore == null) return
+    if (searchResults == null || numResults == null || numResults === 0) return
+    // Wait until the view has laid out its viewport, so that zooming to the
+    // match produces a sensible rect
+    if (configSpaceViewportRect == null || configSpaceViewportRect.isEmpty()) return
+
+    searchMatchToRestoreAtom.set(null)
+    selectAndZoomToMatch(searchResults.at(Math.min(matchToRestore, numResults) - 1))
+  }, [matchToRestore, searchResults, numResults, configSpaceViewportRect, selectAndZoomToMatch])
+
+  useEffect(() => {
+    // Don't clobber the match= parameter before it has been restored
+    if (matchToRestore != null) return
+    saveSearchMatchToHash(resultIndex == null ? null : resultIndex + 1)
+  }, [matchToRestore, resultIndex])
 
   const {selectPrev, selectNext} = useMemo(() => {
     if (numResults == null || numResults === 0 || searchResults == null) {

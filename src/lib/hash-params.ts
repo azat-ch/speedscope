@@ -7,6 +7,8 @@ export interface HashParams {
   viewMode?: ViewMode
   reverse?: boolean
   searchQuery?: string
+  // 1-based index of the search match to select, as displayed in the search box
+  searchMatch?: number
 }
 
 function getViewMode(value: string): ViewMode | null {
@@ -74,6 +76,19 @@ export function saveReverseToHash(reverse: boolean): void {
   )
 }
 
+// null removes the parameter (no match selected)
+export function saveSearchMatchToHash(searchMatch: number | null): void {
+  window.history.replaceState(
+    null,
+    '',
+    hashWithParam(
+      window.location.hash,
+      'match',
+      searchMatch === null ? null : searchMatch.toString(),
+    ),
+  )
+}
+
 // null removes the parameter (search closed or empty query)
 export function saveSearchQueryToHash(searchQuery: string | null): void {
   window.history.replaceState(
@@ -108,6 +123,11 @@ export function getHashParams(hashContents = window.location.hash): HashParams {
         result.localProfilePath = value
       } else if (key === 'search') {
         result.searchQuery = value
+      } else if (key === 'match') {
+        const searchMatch = parseInt(value, 10)
+        if (!isNaN(searchMatch) && searchMatch > 0) {
+          result.searchMatch = searchMatch
+        }
       } else if (key === 'reverse') {
         result.reverse = value === 'true' || value === '1'
       } else if (key === 'view') {
