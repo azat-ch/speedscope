@@ -6,9 +6,13 @@ export interface HashParams {
   localProfilePath?: string
   viewMode?: ViewMode
   reverse?: boolean
+  flatten?: boolean
   searchQuery?: string
   // 1-based index of the search match to select, as displayed in the search box
   searchMatch?: number
+  // Selection to restore: a dot-separated calltree index path for flamechart
+  // views, or a frame key for the sandwich view
+  selected?: string
 }
 
 function getViewMode(value: string): ViewMode | null {
@@ -64,42 +68,40 @@ export function hashWithViewMode(hashContents: string, viewMode: ViewMode): stri
   return hashWithParam(hashContents, 'view', viewModeToString(viewMode))
 }
 
+// No-op when the hash already contains the desired value: callers may be
+// invoked from high-frequency state changes (e.g. hovers), and browsers
+// throttle history.replaceState
+function replaceHashParam(key: string, value: string | null): void {
+  const newHash = hashWithParam(window.location.hash, key, value)
+  if (newHash === (window.location.hash || '#')) return
+  window.history.replaceState(null, '', newHash)
+}
+
 export function saveViewModeToHash(viewMode: ViewMode): void {
-  window.history.replaceState(null, '', hashWithViewMode(window.location.hash, viewMode))
+  replaceHashParam('view', viewModeToString(viewMode))
 }
 
 export function saveReverseToHash(reverse: boolean): void {
-  window.history.replaceState(
-    null,
-    '',
-    hashWithParam(window.location.hash, 'reverse', reverse ? 'true' : null),
-  )
+  replaceHashParam('reverse', reverse ? 'true' : null)
+}
+
+export function saveFlattenToHash(flatten: boolean): void {
+  replaceHashParam('flatten', flatten ? 'true' : null)
 }
 
 // null removes the parameter (no match selected)
 export function saveSearchMatchToHash(searchMatch: number | null): void {
-  window.history.replaceState(
-    null,
-    '',
-    hashWithParam(
-      window.location.hash,
-      'match',
-      searchMatch === null ? null : searchMatch.toString(),
-    ),
-  )
+  replaceHashParam('match', searchMatch === null ? null : searchMatch.toString())
 }
 
 // null removes the parameter (search closed or empty query)
 export function saveSearchQueryToHash(searchQuery: string | null): void {
-  window.history.replaceState(
-    null,
-    '',
-    hashWithParam(
-      window.location.hash,
-      'search',
-      searchQuery === null ? null : encodeURIComponent(searchQuery),
-    ),
-  )
+  replaceHashParam('search', searchQuery === null ? null : encodeURIComponent(searchQuery))
+}
+
+// null removes the parameter (nothing selected)
+export function saveSelectedToHash(selected: string | null): void {
+  replaceHashParam('selected', selected === null ? null : encodeURIComponent(selected))
 }
 
 export function getHashParams(hashContents = window.location.hash): HashParams {
@@ -128,8 +130,14 @@ export function getHashParams(hashContents = window.location.hash): HashParams {
         if (!isNaN(searchMatch) && searchMatch > 0) {
           result.searchMatch = searchMatch
         }
+      } else if (key === 'selected') {
+        if (value.length > 0) {
+          result.selected = value
+        }
       } else if (key === 'reverse') {
         result.reverse = value === 'true' || value === '1'
+      } else if (key === 'flatten') {
+        result.flatten = value === 'true' || value === '1'
       } else if (key === 'view') {
         const mode = getViewMode(value)
         if (mode !== null) {

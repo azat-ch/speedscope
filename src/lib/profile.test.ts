@@ -4,6 +4,8 @@ import {
   CallTreeNode,
   CallTreeProfileBuilder,
   Profile,
+  getCallTreeNodeIndexPath,
+  getCallTreeNodeAtIndexPath,
 } from './profile'
 
 function getFrameInfo(key: string): FrameInfo {
@@ -324,6 +326,38 @@ test('getInvertedProfile', () => {
     'c;b;d 1',
     'b 1',
   ])
+})
+
+test('call tree node index paths', () => {
+  const b = new StackListProfileBuilder()
+
+  const samples = [
+    // prettier-ignore
+    [fa],
+    [fa, fb],
+    [fa, fb, fc],
+    [fd, fb, fc],
+    [fb],
+    [fa, fe],
+  ]
+  samples.forEach(stack => {
+    b.appendSampleWithWeight(stack, 1)
+  })
+  const profile = b.build()
+
+  for (const root of [profile.getGroupedCalltreeRoot(), profile.getAppendOrderCalltreeRoot()]) {
+    // Every node must round-trip through its index path
+    function visit(node: CallTreeNode) {
+      expect(getCallTreeNodeAtIndexPath(root, getCallTreeNodeIndexPath(node))).toBe(node)
+      node.children.forEach(visit)
+    }
+    root.children.forEach(visit)
+
+    expect(getCallTreeNodeAtIndexPath(root, [])).toBeNull()
+    expect(getCallTreeNodeAtIndexPath(root, [root.children.length])).toBeNull()
+    expect(getCallTreeNodeAtIndexPath(root, [-1])).toBeNull()
+    expect(getCallTreeNodeAtIndexPath(root, [0, 99])).toBeNull()
+  }
 })
 
 test('getProfileWithRecursionFlattened', () => {

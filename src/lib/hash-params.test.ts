@@ -36,6 +36,12 @@ test('getHashParams', () => {
   expect(getHashParams('#search=hello&match=3')).toEqual({searchQuery: 'hello', searchMatch: 3})
   expect(getHashParams('#match=0')).toEqual({})
   expect(getHashParams('#match=garbage')).toEqual({})
+  expect(getHashParams('#flatten=true')).toEqual({flatten: true})
+  expect(getHashParams('#selected=0.3.2')).toEqual({selected: '0.3.2'})
+  expect(getHashParams('#selected=')).toEqual({})
+  expect(getHashParams(hashWithParam('', 'selected', encodeURIComponent('void f(int&)')))).toEqual({
+    selected: 'void f(int&)',
+  })
   // Encoded search queries containing hash-syntax characters must round-trip
   const query = 'a&b=c#d%e'
   expect(

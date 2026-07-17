@@ -3,7 +3,7 @@ import {StyleSheet, css} from 'aphrodite'
 import {ProfileTableViewContainer} from './profile-table-view'
 import {h, JSX, createContext} from 'preact'
 import {memo} from 'preact/compat'
-import {useCallback, useMemo, useContext} from 'preact/hooks'
+import {useCallback, useMemo, useContext, useEffect} from 'preact/hooks'
 import {commonStyle, Sizes, FontSize} from './style'
 import {InvertedCallerFlamegraphView} from './inverted-caller-flamegraph-view'
 import {CalleeFlamegraphView} from './callee-flamegraph-view'
@@ -12,7 +12,13 @@ import {ActiveProfileState} from '../app-state/active-profile-state'
 import {sortBy} from '../lib/utils'
 import {ProfileSearchContext} from './search-view'
 import {Theme, useTheme, withTheme} from './themes/theme'
-import {SortField, SortDirection, profileGroupAtom, tableSortMethodAtom} from '../app-state'
+import {
+  SortField,
+  SortDirection,
+  profileGroupAtom,
+  selectedToRestoreAtom,
+  tableSortMethodAtom,
+} from '../app-state'
 import {useAtom} from '../lib/atom'
 import {StatelessComponent} from '../lib/preact-helpers'
 
@@ -158,6 +164,20 @@ export const SandwichViewContainer = memo((ownProps: SandwichViewContainerProps)
   const profile = activeProfileState.profile
   const tableSortMethod = useAtom(tableSortMethodAtom)
   const profileSearchResults = useContext(ProfileSearchContext)
+
+  // Restore the selection shared via the selected= URL parameter, which for
+  // the sandwich view holds a frame key
+  const selectedToRestore = useAtom(selectedToRestoreAtom)
+  useEffect(() => {
+    if (selectedToRestore == null) return
+    selectedToRestoreAtom.set(null)
+
+    let frame: Frame | null = null
+    profile.forEachFrame(f => {
+      if (String(f.key) === selectedToRestore) frame = f
+    })
+    if (frame != null) setSelectedFrame(frame)
+  }, [selectedToRestore, profile, setSelectedFrame])
 
   const selectedFrame = callerCallee ? callerCallee.selectedFrame : null
 
