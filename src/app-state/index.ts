@@ -1,6 +1,12 @@
 import {Atom} from '../lib/atom'
 import {ViewMode} from '../lib/view-mode'
-import {getHashParams, HashParams, saveReverseToHash, saveViewModeToHash} from '../lib/hash-params'
+import {
+  getHashParams,
+  HashParams,
+  saveReverseToHash,
+  saveSearchQueryToHash,
+  saveViewModeToHash,
+} from '../lib/hash-params'
 import {ProfileGroupAtom} from './profile-group'
 import {Vec2} from '../lib/math'
 
@@ -27,8 +33,18 @@ reverseFlamegraphAtom.subscribe(() => {
 // An empty string indicates that the search is open by no filter is applied.
 // searchIsActive is stored separately, because we may choose to persist the
 // query even when the search input is closed.
-export const searchIsActiveAtom = new Atom<boolean>(false, 'searchIsActive')
-export const searchQueryAtom = new Atom<string>('', 'searchQueryAtom')
+export const searchIsActiveAtom = new Atom<boolean>(
+  hashParams.searchQuery != null,
+  'searchIsActive',
+)
+export const searchQueryAtom = new Atom<string>(hashParams.searchQuery || '', 'searchQueryAtom')
+
+function saveSearchToHash() {
+  const query = searchIsActiveAtom.get() ? searchQueryAtom.get() : ''
+  saveSearchQueryToHash(query.length > 0 ? query : null)
+}
+searchIsActiveAtom.subscribe(saveSearchToHash)
+searchQueryAtom.subscribe(saveSearchToHash)
 
 // Which top-level view should be displayed
 export const viewModeAtom = new Atom<ViewMode>(ViewMode.CHRONO_FLAME_CHART, 'viewMode')

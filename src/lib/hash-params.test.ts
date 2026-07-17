@@ -32,6 +32,15 @@ test('getHashParams', () => {
   expect(getHashParams('#reverse=true')).toEqual({reverse: true})
   expect(getHashParams('#reverse=1')).toEqual({reverse: true})
   expect(getHashParams('#reverse=false')).toEqual({reverse: false})
+  expect(getHashParams('#search=hello%20world')).toEqual({searchQuery: 'hello world'})
+  // Encoded search queries containing hash-syntax characters must round-trip
+  const query = 'a&b=c#d%e'
+  expect(
+    getHashParams(hashWithParam('#view=left-heavy', 'search', encodeURIComponent(query))),
+  ).toEqual({
+    viewMode: ViewMode.LEFT_HEAVY_FLAME_GRAPH,
+    searchQuery: query,
+  })
 })
 
 test('hashWithParam', () => {

@@ -6,6 +6,7 @@ export interface HashParams {
   localProfilePath?: string
   viewMode?: ViewMode
   reverse?: boolean
+  searchQuery?: string
 }
 
 function getViewMode(value: string): ViewMode | null {
@@ -73,6 +74,19 @@ export function saveReverseToHash(reverse: boolean): void {
   )
 }
 
+// null removes the parameter (search closed or empty query)
+export function saveSearchQueryToHash(searchQuery: string | null): void {
+  window.history.replaceState(
+    null,
+    '',
+    hashWithParam(
+      window.location.hash,
+      'search',
+      searchQuery === null ? null : encodeURIComponent(searchQuery),
+    ),
+  )
+}
+
 export function getHashParams(hashContents = window.location.hash): HashParams {
   try {
     if (!hashContents.startsWith('#')) {
@@ -92,6 +106,8 @@ export function getHashParams(hashContents = window.location.hash): HashParams {
         result.title = value
       } else if (key === 'localProfilePath') {
         result.localProfilePath = value
+      } else if (key === 'search') {
+        result.searchQuery = value
       } else if (key === 'reverse') {
         result.reverse = value === 'true' || value === '1'
       } else if (key === 'view') {
